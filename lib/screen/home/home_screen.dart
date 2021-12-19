@@ -1,40 +1,81 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:task_management/auth/auth_service.dart';
+import 'package:task_management/screen/add_category.dart';
+import 'package:task_management/screen/event/event_add.dart';
 import 'package:task_management/screen/navbar/navbar.dart';
+import 'package:task_management/screen/tasks/add_tasks.dart';
+import 'package:task_management/services/database.dart';
 import 'package:task_management/widget/category_list.dart';
 import 'package:task_management/widget/event_list.dart';
 import 'package:task_management/widget/tasks.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
+  @override
+  _HomeState createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+
+  AuthenticationService authenticationService = AuthenticationService(FirebaseAuth.instance);
+  FireStoreDatabase fireStoreDatabase = FireStoreDatabase();
+  final format =  DateFormat('dd-MM-yyyy');
+  bool? _admin;
+
+  getAdmin() async {
+    List<QueryDocumentSnapshot> admin = await fireStoreDatabase.isAdmin(authenticationService.getCurrentUID);
+    for(DocumentSnapshot document in admin) {
+
+      if(mounted){
+        setState(() {
+          _admin = document['isAdmin'];
+        });
+      }
+
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getAdmin();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: buildAppBar(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            buildAddTask(),
-            CategoryList(),
-            buildTodayTasks(),
-            EventList(),
-            Tasks(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Navbar(),
+          backgroundColor: Colors.grey.shade100,
+          appBar: buildAppBar(),
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildAddTask(),
+                CategoryList(),
+                buildAllEvents(),
+                EventList(),
+                Tasks(),
+              ],
+            ),
+          ),
+          bottomNavigationBar: Navbar(),
     );
   }
 
-  Container buildTodayTasks() {
+  Container buildAllEvents() {
     return Container(
         padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-        child: Text("Today Tasks",
+        child: Text("Most Recently Added Events",
             style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.w900,
                 fontSize: 24)));
   }
+
+
 
   Container buildAddTask() {
     return Container(
@@ -50,11 +91,11 @@ class Home extends StatelessWidget {
             width: 10,
           ),
           Text(
-            "April 12, 2021",
+            format.format(DateTime.now()),
             style: TextStyle(
                 color: Colors.grey.shade900,
                 fontWeight: FontWeight.w400,
-                fontSize: 14),
+                fontSize: 15),
           ),
           Spacer(),
           TextButton.icon(
@@ -78,7 +119,9 @@ class Home extends StatelessWidget {
                 Icons.add,
                 size: 16,
               ),
-              onPressed: () {})
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => AddTask()),);
+              })
         ],
       ),
     );
@@ -87,11 +130,15 @@ class Home extends StatelessWidget {
   AppBar buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
-      leading: Icon(
-        Icons.menu,
-        color: Colors.grey.shade600,
-        size: 25,
-      ),
+      leading:  IconButton(
+          onPressed: ()  {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => EventAdd()),);
+          },
+          icon: Icon(
+            Icons.event,
+            color: Colors.grey.shade700,
+            size: 25,
+          )),
       elevation: 0,
       title: Text(
         "TODOS",
@@ -102,17 +149,24 @@ class Home extends StatelessWidget {
       ),
       centerTitle: true,
       actions: [
+        _admin == true ?
         IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryAdd()),);
+            },
             icon: Icon(
-              Icons.push_pin_outlined,
+              Icons.add,
               color: Colors.grey.shade600,
               size: 25,
-            )),
+            )) : Text("no"),
+
         IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              await context.read<AuthenticationService>().signOut();
+
+            },
             icon: Icon(
-              Icons.search_rounded,
+              Icons.logout,
               color: Colors.grey.shade700,
               size: 25,
             )),

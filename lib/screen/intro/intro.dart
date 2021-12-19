@@ -1,5 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:task_management/screen/login/login_page.dart';
+import 'package:task_management/screen/register/register_page.dart';
 
 class Intro extends StatelessWidget {
   @override
@@ -8,42 +10,18 @@ class Intro extends StatelessWidget {
         body: SingleChildScrollView(
       child: Column(
         children: [
-          Image.asset("assets/images/coffee_time.png"),
+          Image.asset("assets/images/avatar.png"),
           SizedBox(
             height: 20,
           ),
           Container(
             child: Text(
               "Login and Register",
-              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 25, color: Colors.brown),
+              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 25, color: Colors.orange.shade900),
             ),
           ),
           SizedBox(height: 20,),
           loginAndRegisterButton(context),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 30),
-              child: TextButton(
-                onPressed: (){},
-                  style: ButtonStyle(
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0),
-                              side: BorderSide(color: Colors.blueGrey)
-                          ))
-                  ),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.share, color: Colors.blue,),
-                      SizedBox(width: 20,),
-                      Text("Connect with Anonyms", style: TextStyle(color: Colors.blue.shade800 ,fontSize: 20, fontWeight: FontWeight.w400))
-                    ],
-                  ),
-                )
-              ),
-            ),
-
         ],
       ),
     ));
@@ -63,7 +41,11 @@ class Intro extends StatelessWidget {
                       shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                           RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0),
                       ))),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context){
+                      return RegisterPage();
+                    }));
+                  },
                   child: Text(
                     'Register',
                     style: TextStyle(fontSize: 25, fontWeight: FontWeight.w300),

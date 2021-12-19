@@ -1,59 +1,94 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:task_management/auth/auth_service.dart';
+import 'package:task_management/screen/intro/intro.dart';
+import 'package:task_management/screen/profile/profile_picture.dart';
+import 'package:task_management/services/database.dart';
+import 'package:task_management/widget/profile_edit.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
+  final userId;
+
+  const ProfileScreen({Key? key, required this.userId}) : super(key: key);
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+
+  FireStoreDatabase fireStoreDatabase = FireStoreDatabase();
+
+  int? userTaskLength;
+  int? userEventLength;
+
+  userTaskCount() async {
+    int taskLength = await fireStoreDatabase.userTaskLength(widget.userId);
+    setState(() {
+      userTaskLength = taskLength;
+    });
+  }
+
+  userEventCount() async {
+    int eventLength = await fireStoreDatabase.userEventLength(widget.userId);
+    setState(() {
+      userEventLength = eventLength;
+    });
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    userTaskCount();
+    userEventCount();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: buildAppBar(),
-      body: Column(
-        children: [
-          ProfilePicture(),
-          SizedBox(
-            height: 20,
-          ),
-          ProfileMenu(
-            title: "My Account",
-            icon: Icons.person,
-            press: () {
-              print("Profile Page");
-            },
-          ),
-          ProfileMenu(
-            title: "Notification",
-            icon: Icons.notifications_active_outlined,
-            press: () {
+      body: FutureBuilder<Object>(
+          future: fireStoreDatabase.singleUserInfo(widget.userId),
+          builder: (BuildContext context, AsyncSnapshot snapshot){
+            if(snapshot.hasData){
+              return Column(
+                children: [
+                  ProfilePicture(data: snapshot.data),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  ProfileMenu(
+                    title: "My Account Edit",
+                    icon: Icons.person,
+                    press: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileEdit(data: snapshot.data)),);
+                    },
+                  ),
+                  ProfileMenu(
+                    title: "My Tasks Length : $userTaskLength",
+                    icon: Icons.title,
+                    press: () {},
+                  ),
+                  ProfileMenu(
+                    title: "My Event Length : $userEventLength",
+                    icon: Icons.event,
+                    press: () {},
+                  ),
+                  ProfileMenu(
+                    title: "Logout",
+                    icon: Icons.logout,
+                    press: () async {
+                      await context.read<AuthenticationService>().signOut();
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => Intro()),);
 
-            },
-          ),
-          ProfileMenu(
-            title: "Settings",
-            icon: Icons.settings,
-            press: () {
-
-            },
-          ),
-          ProfileMenu(
-            title: "My Tasks",
-            icon: Icons.add_task_outlined,
-            press: () {
-
-            },
-          ),
-          ProfileMenu(
-            title: "Events",
-            icon: Icons.event,
-            press: () {
-
-            },
-          )
-        ],
-      ),
+                    },
+                  )
+                ],
+              );
+            }else{
+              return Center(child: CircularProgressIndicator());
+            }
+      })
     );
   }
 
@@ -120,41 +155,4 @@ class ProfileMenu extends StatelessWidget {
   }
 }
 
-class ProfilePicture extends StatelessWidget {
-  const ProfilePicture({
-    Key? key,
-  }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 100,
-      height: 100,
-      child: Stack(
-        clipBehavior: Clip.none,
-        fit: StackFit.expand,
-        children: [
-          CircleAvatar(
-            backgroundColor: Colors.grey,
-          ),
-          Positioned(
-            right: -10,
-            bottom: 0,
-            child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.grey, width: 1)),
-                child: IconButton(
-                  onPressed: () {},
-                  icon: Icon(Icons.photo_camera),
-                  color: Colors.grey,
-                )),
-          )
-        ],
-      ),
-    );
-  }
-}

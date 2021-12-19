@@ -1,12 +1,45 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:task_management/auth/auth_service.dart';
+import 'package:task_management/model/task.dart';
+import 'package:task_management/screen/profile/profile_screen.dart';
+import 'package:task_management/services/database.dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/widget/task_content.dart';
+import 'package:intl/intl.dart';
 
 class TaskDetail extends StatefulWidget {
+  final id;
+  final userId;
+
+  const TaskDetail({Key? key, @required this.id, this.userId}) : super(key: key);
+
   @override
   _TaskDetailState createState() => _TaskDetailState();
 }
 
 class _TaskDetailState extends State<TaskDetail> {
+  FireStoreDatabase fireStoreDatabase = FireStoreDatabase();
+
+  Task task = Task();
+  int? attendesLength;
+
+
+  _taskData() async {
+    Task taskModel = await fireStoreDatabase.getTask(widget.id);
+    setState(() {
+      task = taskModel;
+      attendesLength = taskModel.attendes!.length;
+    });
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _taskData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,20 +53,37 @@ class _TaskDetailState extends State<TaskDetail> {
             children: [
               Row(
                 children: [
-                  Text("Web Design",
+                  Text(task.title.toString(),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 25,
                           color: Colors.grey.shade800)),
-                  SizedBox(width: 20,),
-                  Icon(Icons.verified_outlined, color: Colors.green.shade700,)
+                  Spacer(),
+                  task.userId == context.read<AuthenticationService>().getCurrentUID
+                      ? IconButton(
+                          onPressed: () async {
+                            bool? isCompleted;
+
+                            setState(() {
+                              isCompleted = task.completed == true ? false : true;
+                            });
+                            await fireStoreDatabase.taskCompleted(widget.id, isCompleted);
+                          },
+                          icon: Icon(
+                            Icons.check_box_outlined,
+                            size: 25,
+                            color: Colors.green.shade800,
+                          ))
+                      : Icon(
+                          Icons.verified,
+                          color: Colors.green,
+                        ),
                 ],
               ),
               SizedBox(
                 height: 10,
               ),
-              Text(
-                  "Content is upload and shared. Uploaded when the user specifies when the music will be avaliable to the general public.",
+              Text(task.description.toString(),
                   style: TextStyle(
                       fontWeight: FontWeight.normal,
                       height: 1.3,
@@ -42,7 +92,9 @@ class _TaskDetailState extends State<TaskDetail> {
               SizedBox(
                 height: 10,
               ),
-              TaskContent(),
+
+              TaskContent(task: task, userId: widget.userId),
+
               SizedBox(
                 height: 20,
               ),
@@ -50,7 +102,7 @@ class _TaskDetailState extends State<TaskDetail> {
               SizedBox(
                 height: 10,
               ),
-              RelatedTasks()
+              RelatedTasks(task: task)
             ],
           ),
         ),
@@ -59,7 +111,7 @@ class _TaskDetailState extends State<TaskDetail> {
   }
 
   Text buildTaskText() {
-    return Text("Related Tasks",
+    return Text("Task Attendees",
         style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -71,7 +123,9 @@ class _TaskDetailState extends State<TaskDetail> {
       backgroundColor: Colors.grey.shade200,
       elevation: 0,
       leading: IconButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pop(context);
+        },
         icon: Icon(Icons.arrow_back_ios_rounded),
         color: Colors.black54,
       ),
@@ -79,258 +133,111 @@ class _TaskDetailState extends State<TaskDetail> {
   }
 }
 
-class TaskContent extends StatelessWidget {
-  const TaskContent({
+
+
+
+class RelatedTasks extends StatefulWidget {
+  final Task task;
+
+  const RelatedTasks({
     Key? key,
+    required this.task,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      //padding: EdgeInsets.only(top: 5, bottom: 5),
-      width: MediaQuery.of(context).size.width,
-      decoration: BoxDecoration(
-        color: Colors.white70,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey, width: 1),
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                  child: Container(
-                    padding: EdgeInsets.only(top: 5),
-                      child: Text("Priority",
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.black87)))),
-              SizedBox(
-                width: 50,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 5),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                        padding: EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                            color: Colors.yellow.shade100,
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: Colors.grey.shade200)),
-                        child: Text(
-                          "HIGHT",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orangeAccent.shade400),
-                        )),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          buildLine(),
-          Row(
-            children: [
-              Expanded(
-                  child: Container(
-                child: Text("Assigned To",
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.black87)),
-              )),
-              SizedBox(
-                width: 50,
-              ),
-              Expanded(
-                  child: Align(
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    Container(
-                      child: Text("Devon Lane",
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                              color: Colors.black87)),
-                    ),
-                    SizedBox(
-                      width: 10,
-                    ),
-                    ClipOval(
-                      child: Container(
-                        decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 1)),
-                        child: Image.asset(
-                          "assets/images/coffee_time.png",
-                          height: 35,
-                          width: 35,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-            ],
-          ),
-          buildLine(),
-          Row(
-            children: [
-              Expanded(
-                  child: Container(
-                      padding: EdgeInsets.only(top: 5, bottom: 5),
-                      child: Text("Due Date",
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.black87)))),
-              SizedBox(
-                width: 50,
-              ),
-              Expanded(
-                  child: Container(
-                      child: Text(
-                "Due 17 Oct",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.redAccent),
-              )))
-            ],
-          ),
-          buildLine(),
-          Row(
-            children: [
-              Expanded(
-                  child: Container(
-                      padding: EdgeInsets.only(top: 5, bottom: 10),
-                      child: Text("Task Type",
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.black87)))),
-              SizedBox(
-                width: 50,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 5, bottom: 5),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                        padding: EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: Colors.grey.shade200)),
-                        child: Text(
-                          "DEVELOPMENT",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue),
-                        )),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Container buildLine() {
-    return Container(
-      width: double.infinity,
-      child: Divider(
-        thickness: 1,
-        color: Colors.grey,
-      ),
-    );
-  }
+  _RelatedTasksState createState() => _RelatedTasksState();
 }
 
-class RelatedTasks extends StatelessWidget {
-  const RelatedTasks({
-    Key? key,
-  }) : super(key: key);
+class _RelatedTasksState extends State<RelatedTasks> {
+  FireStoreDatabase fireStoreDatabase = FireStoreDatabase();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height,
-      child: ListView.builder(
-          itemCount: 30,
-          itemBuilder: (context, index) {
-            return Container(
-              margin: EdgeInsets.all(5),
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white70,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        image: DecorationImage(
-                          image: AssetImage('assets/images/coffee_time.png'),
-                          fit: BoxFit.cover,
+        height: 200, //MediaQuery.of(context).size.height,
+        child: FutureBuilder<QuerySnapshot>(
+          future: fireStoreDatabase.getUsers(),
+          builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (!snapshot.hasData) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            return ListView.builder(
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  QueryDocumentSnapshot users = snapshot.data!.docs[index];
+
+                  Timestamp now = users['date'];
+                  DateTime dateNow = now.toDate();
+
+                    return widget.task.attendes!.any((user) => user['uid'] == users['userId']) ?
+                    GestureDetector(
+                      onTap: (){
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: users.id)),);
+                      },
+                      child: Container(
+                        margin: EdgeInsets.all(5),
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white70,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      )),
-                  Column(
-                    children: [
-                      Text("Lexsas Aplication",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.grey.shade900)),
-                      SizedBox(
-                        height: 5,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                                //width: 60,
+                                //height: 60,
+                              decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white, width: 2)),
+                                 child: CircleAvatar(
+                              backgroundColor: Colors.grey[600],
+                              radius: 30,
+                              backgroundImage: users['profileUrl'].isNotEmpty? NetworkImage(users['profileUrl']) : AssetImage("assets/images/avatar.png") as ImageProvider,),),
+                            Column(
+                              children: [
+                                Text(users['userName'],
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Colors.grey.shade900)),
+                                SizedBox(
+                                  height: 5,
+                                ),
+                                Text("Attendees",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.normal,
+                                        fontSize: 16,
+                                        color: Colors.grey.shade600)),
+
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(DateFormat('MMMd').format(dateNow),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.normal,
+                                        fontSize: 18,
+                                        color: Colors.deepPurpleAccent.shade400)),
+                                SizedBox(height: 5,),
+
+                                users['isAdmin'] == true ? Text("Admin" ,style: TextStyle(
+                                    fontWeight: FontWeight.normal,
+                                    fontSize: 16,
+                                    color: Colors.green.shade700)) : Text("User", style: TextStyle(
+                                    fontWeight: FontWeight.normal,
+                                    fontSize: 16,
+                                    color: Colors.blueAccent)),
+
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      Text("Jacob Jones",
-                          style: TextStyle(
-                              fontWeight: FontWeight.normal,
-                              fontSize: 18,
-                              color: Colors.grey.shade600)),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Text("07/04/2021",
-                          style: TextStyle(
-                              fontWeight: FontWeight.normal,
-                              fontSize: 18,
-                              color: Colors.grey.shade600)),
-                      SizedBox(
-                        height: 5,
-                      ),
-                      Text("Completed",
-                          style: TextStyle(
-                              fontWeight: FontWeight.normal,
-                              fontSize: 18,
-                              color: Colors.cyanAccent.shade700)),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }),
-    );
+                    )
+                        : Text("");
+                });
+          },
+        ));
   }
 }

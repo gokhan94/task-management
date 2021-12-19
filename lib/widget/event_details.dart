@@ -1,12 +1,53 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:task_management/model/event.dart';
+import 'package:task_management/services/database.dart';
+import 'package:task_management/widget/date.dart';
+import 'package:task_management/widget/event_content.dart';
+import 'package:task_management/widget/participants.dart';
 
 class EventDetails extends StatefulWidget {
+  final Event event;
+  final userId;
+
+  const EventDetails(
+      {Key? key, required this.event,  required this.userId})
+      : super(key: key);
   @override
   _EventDetailsState createState() => _EventDetailsState();
 }
 
 class _EventDetailsState extends State<EventDetails> {
+  FireStoreDatabase fireStoreDatabase = FireStoreDatabase();
+
+  String? photoUrl;
+  String? userName;
+
+  Future<DocumentSnapshot> currentUserInfo() async {
+    DocumentSnapshot documentSnapshot = await fireStoreDatabase.singleUserInfo(widget.userId);
+    setState(() {
+      photoUrl = documentSnapshot['profileUrl'];
+      userName = documentSnapshot['userName'];
+    });
+    return documentSnapshot;
+  }
+
+  List<QueryDocumentSnapshot> _eventAttendeeList = [];
+  getAttendees() async {
+    List<QueryDocumentSnapshot> event = await fireStoreDatabase.getAttendeesEvent(widget.event.id);
+    setState(() {
+      _eventAttendeeList = event;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    currentUserInfo();
+    getAttendees();
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -20,43 +61,77 @@ class _EventDetailsState extends State<EventDetails> {
                   children: [
                     EventBackdrop(size: size),
                     Container(
-                      margin: EdgeInsets.only(top: size.height * 0.3),
+                      margin: EdgeInsets.only(top: size.height * 0.15),
                       width: double.infinity,
-                      height: size.height * 0.7,
+                      height: size.height * 0.8,
                       decoration: BoxDecoration(
                           borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(30),
                               topRight: Radius.circular(30)),
-                          color: Colors.white),
+                          color: Colors.grey.shade50),
                       child: Padding(
                         padding: EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                                "Volunteer at ST. Georga Mara-thon 2021 ( Gökhan )",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 22,
-                                    color: Colors.black)),
+                            Row(
+                              children: [
+                                Text(widget.event.title.toString(),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 20,
+                                        color: Colors.blueGrey.shade900)),
+                                Spacer(),
+                                _eventAttendeeList.any((user) => user['userId'] == widget.userId) ?
+                                    Text("Already registered",
+                                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                                      )
+                                    : IconButton(
+                                        onPressed: () async {
+                                          await fireStoreDatabase.saveAttendeesEvent(widget.event.id, widget.userId, userName, photoUrl);
+                                        },
+                                        icon: Icon(
+                                          Icons.person_add_alt,
+                                          size: 30,
+                                          color: Colors.green.shade400,
+                                        )),
+                              ],
+                            ),
                             SizedBox(
                               height: 20,
                             ),
                             Container(
                               decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.grey, width: 1)),
+                                  border:
+                                      Border.all(color: Colors.grey, width: 1)),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Date(),
+                                  Date(event: widget.event),
                                   buildLine(),
-                                  Participants(size: size),
+                                  Participants(size: size, eventAttendeeList: _eventAttendeeList),
                                 ],
                               ),
                             ),
+
+                             SizedBox(height: 20,),
+
+                             Row(
+                                children: [
+                                  Icon(Icons.location_on, color: Colors.grey, size: 25,),
+                                  Text(widget.event.address.toString(),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 20,
+                                          color: Colors.grey.shade800)),
+                                ],
+                              ),
+
+
+
                             eventAboutTitle(),
-                            EventContent(),
+                            EventContent(event: widget.event),
                           ],
                         ),
                       ),
@@ -93,122 +168,6 @@ class _EventDetailsState extends State<EventDetails> {
   }
 }
 
-class EventContent extends StatelessWidget {
-  const EventContent({
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.only(top: 10),
-          child: Container(
-            child: Text(
-                "Lorem Ipsum, dizgi ve baskı endüstrisinde kullanılan mıgır metinlerdir. Lorem Ipsum, adı bilinmeyen bir matbaacının bir hurufat numune kitabı oluşturmak üzere bir yazı galerisini alarak karıştırdığı 1500'lerden beri endüstri standardı sahte metinler olarak kullanılmıştır. Beşyüz yıl boyunca varlığını sürdürmekle kalmamış, aynı zamanda pek değişmeden elektronik dizgiye de sıçramıştır. 1960'larda Lorem Ipsum pasajları da içeren Letraset yapraklarının yayınlanması ile ve yakın zamanda Aldus PageMaker gibi Lorem Ipsum sürümleri içeren masaüstü yayıncılık yazılımları ile popüler olmuştur.",
-                style: TextStyle(
-                    height: 1.4, fontSize: 19, color: Colors.black87)),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class Participants extends StatelessWidget {
-  const Participants({
-    Key? key,
-    required this.size,
-  }) : super(key: key);
-
-  final Size size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Expanded(
-          child: Container(
-            padding: EdgeInsets.only(left: 30),
-            child: Text("Going",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.black87)),
-          ),
-        ),
-        Expanded(
-          child: Container(
-            width: size.width * .30,
-            height: 50,
-            child: Stack(
-              children: [
-                ...List.generate(3, (index) {
-                  return Positioned(
-                      left: (30 * index).toDouble(),
-                      child: ClipOval(
-                        child: Container(
-                          decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white, width: 2)),
-                          child: Image.asset(
-                            "assets/images/coffee_time.png",
-                            height: 40,
-                            width: 40,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ));
-                }),
-              ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text("+20 Going",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Colors.blueAccent.shade400)),
-        ),
-      ],
-    );
-  }
-}
-
-class Date extends StatelessWidget {
-  const Date({
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.only(left: 25, right: 40),
-            child: Text("Date",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.black87)),
-          ),
-          Expanded(
-            child: Text("Thursday, July 24, 2021\n 8.30 AM - 11.30 AM",
-                style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 19,
-                    color: Colors.black54)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class EventBackdrop extends StatelessWidget {
   const EventBackdrop({
     Key? key,
@@ -222,13 +181,21 @@ class EventBackdrop extends StatelessWidget {
     return Column(
       children: [
         Container(
-            height: size.height * 0.4,
+            height: size.height * 0.2,
             width: size.width,
-            decoration: BoxDecoration(
-                image: DecorationImage(
-              fit: BoxFit.cover,
-              image: AssetImage("assets/images/header.png"),
-            )))
+            decoration:  BoxDecoration(
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30)),
+                color: Colors.grey.shade200),
+        child: Row(
+          children: [
+            IconButton(onPressed: (){ Navigator.pop(context);}, icon: Icon(Icons.arrow_back_ios_rounded, color: Colors.grey,)),
+            SizedBox(width: 10,),
+            Text("Event Info Page", style: TextStyle(color: Colors.blueGrey, fontSize: 25, fontWeight: FontWeight.w600),),
+          ],
+        ),
+        )
       ],
     );
   }

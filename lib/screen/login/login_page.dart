@@ -1,20 +1,31 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import 'package:task_management/auth/auth_service.dart';
+import 'package:task_management/model/user.dart';
+import 'package:task_management/services/database.dart';
 import '../../const.dart';
+import 'package:provider/provider.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
 
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+
   String? email, password;
 
+  FireStoreDatabase fireStoreDatabase = FireStoreDatabase();
+
   final ButtonStyle raisedButtonStyle = ElevatedButton.styleFrom(
-    onPrimary: Colors.black87,
+    onPrimary: Colors.blueGrey,
     primary: Colors.grey[300],
     textStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
     minimumSize: Size(120, 50),
     padding: EdgeInsets.symmetric(horizontal: 16),
     shape: RoundedRectangleBorder(
+      side: BorderSide(color: Colors.blueGrey.shade200, width: 1),
       borderRadius: BorderRadius.all(Radius.circular(10)),
     ),
   );
@@ -48,12 +59,12 @@ class LoginPage extends StatelessWidget {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                             borderSide:
-                                BorderSide(color: Colors.grey, width: 1.0),
+                            BorderSide(color: Colors.blueGrey.shade600, width: 1.5),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                             borderSide:
-                                BorderSide(color: Colors.brown, width: 1.0),
+                                BorderSide(color: Colors.green.shade600, width: 1.5),
                           ),
                         ),
                         validator: (value) {
@@ -81,12 +92,12 @@ class LoginPage extends StatelessWidget {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                             borderSide:
-                                BorderSide(color: Colors.grey, width: 1.0),
+                                BorderSide(color: Colors.blueGrey.shade600, width: 1.5),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                             borderSide:
-                                BorderSide(color: Colors.brown, width: 1.0),
+                            BorderSide(color: Colors.green.shade600, width: 1.5),
                           ),
                         ),
                         validator: (value) {
@@ -104,7 +115,7 @@ class LoginPage extends StatelessWidget {
                     ),
                     ElevatedButton(
                         style: raisedButtonStyle,
-                        onPressed: _loginButton,
+                        onPressed: _login,
                         child: Text("Login"))
                   ],
                 ),
@@ -116,15 +127,17 @@ class LoginPage extends StatelessWidget {
     );
   }
 
-  void _loginButton() {
+  void _login() async {
     final form = _formKey.currentState;
     if (form!.validate()) {
-
       form.save();
-       // auth services
 
+      Users? user = await context.read<AuthenticationService>().signIn(email: email!, password: password!);
 
-      print('Form is valid');
+      if (user != null) {
+        await fireStoreDatabase.saveUser(user);
+      }
+
     } else {
       print('Form is invalid');
     }
@@ -136,7 +149,7 @@ class LoginPage extends StatelessWidget {
       child: Text(
         "Welcome Login Page !",
         style: TextStyle(
-            color: Colors.brown, fontSize: 30, fontWeight: FontWeight.w400),
+            color: Colors.blueGrey, fontSize: 30, fontWeight: FontWeight.w400),
       ),
     );
   }
@@ -149,11 +162,6 @@ class LoginPage extends StatelessWidget {
       title: Text(
         "Login",
         style: TextStyle(color: Colors.grey.shade700),
-      ),
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_outlined),
-        onPressed: () {},
-        color: Colors.black45,
       ),
     );
   }
